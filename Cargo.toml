@@ -1,0 +1,6 @@
+[package]
+name = "rfc1751"
+version = "0.1.0"
+authors = ["icasdri <icasdri@example.com>"]
+
+[dependencies]
