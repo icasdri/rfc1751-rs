@@ -1,10 +1,12 @@
 mod words;
 use words::WORDS;
 
+#[derive(Debug)]
 pub enum FromRfc1751Error {
 
 }
 
+#[derive(Debug)]
 pub enum ToRfc1751Error {
     NotMultipleOfEight
 }
@@ -24,21 +26,29 @@ impl ToRfc1751 for [u8] {
         }
 
         let mut result = String::new();
-        let mut build= 0;
+        let mut build = 0;
         let mut have = 0;
         for current in self.iter() {
             have += 8;
+            println!("START build = {0:011b}", build);
+            println!("current = {0:08b}", current);
             if have > 11 {
                 let d = have - 11;
+                println!("have = {} > 11, PREP", have);
+                println!("d = {}", d);
                 build += (current >> d) as usize;
+                println!("FINAL build = {0:011b}", build);
+                println!("              aka. {}: '{}'", build, WORDS[build]);
                 result.push_str(WORDS[build]);
                 result.push_str(" ");
                 // reset and carry over if necessary
-                build = (current << d) as usize;
-                have -= 11
+                build = (*current as usize % (2 << (d-1))) * (2 << ((11-d)-1));
+                have = d
             } else {
                 let d = 11 - have;
-                build += (current << d) as usize;
+                println!("have = {} < 11", have);
+                println!("d = {}", d);
+                build += (*current as usize) * (2 << (d-1));
             }
         }
         // pop the trailing space
@@ -53,6 +63,8 @@ mod tests {
     fn it_works() {
         use super::ToRfc1751;
         let target = [0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53];;
-        assert_eq!("TIDE ITCH SLOW REIN RULE MOT", target.to_rfc1751());
+        let result = target.to_rfc1751();
+        assert!(result.is_ok());
+        assert_eq!("TIDE ITCH SLOW REIN RULE MOT", result.unwrap());
     }
 }
