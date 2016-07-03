@@ -26,7 +26,7 @@ impl ToRfc1751 for [u8] {
         }
 
         let mut result = String::new();
-        let mut build = 0;
+        let mut build: usize = 0;
         let mut have = 0;
         for current in self.iter() {
             have += 8;
@@ -51,8 +51,7 @@ impl ToRfc1751 for [u8] {
                 build += (*current as usize) * (2 << (d-1));
             }
         }
-        // pop the trailing space
-        result.pop();
+        result.push_str(WORDS[build]);
         Ok(result)
     }
 }
