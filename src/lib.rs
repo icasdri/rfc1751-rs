@@ -2,8 +2,8 @@ mod words;
 use words::WORDS;
 
 #[derive(Debug)]
-pub enum FromRfc1751Error {
-
+pub enum FromRfc1751Error<'a> {
+    InvalidWord(&'a str)
 }
 
 #[derive(Debug)]
@@ -17,6 +17,18 @@ pub trait FromRfc1751 {
 
 pub trait ToRfc1751 {
     fn to_rfc1751(&self) -> Result<String, ToRfc1751Error>;
+}
+
+fn get_word_index(word: &str) -> Result<usize, FromRfc1751Error> {
+    match word.len() {
+        // we know that all valid words are 1 to 4 letters long
+        1...4 => {
+            // binary search for the word's index (aka. bit value)
+            WORDS.binary_search(&word)
+                 .map_err(|_| FromRfc1751Error::InvalidWord(word))
+        },
+        _ => Err(FromRfc1751Error::InvalidWord(word))
+    }
 }
 
 fn to_rfc1751_transform_append_subkey(input: &[u8], append_to: &mut String) {
