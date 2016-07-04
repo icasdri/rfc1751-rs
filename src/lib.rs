@@ -317,8 +317,6 @@ mod tests {
 
     fn word_index_test(word: &'static str, expected: Result<usize, ()>) {
         let result = super::get_word_index(word);
-        println!("{:?}", result);
-        println!("{}", WORDS[649]);
         match expected {
             Ok(x) => {
                 assert!(result.is_ok());
