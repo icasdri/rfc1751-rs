@@ -70,7 +70,6 @@ impl ToRfc1751 for [u8] {
     }
 }
 
-#[cfg(test)]
 
 #[cfg(test)]
 mod tests {
@@ -100,12 +99,40 @@ mod tests {
                            "HAAG CITY BORE O TEAL AWL"
     }
 
-    use super::ToRfc1751;
-
     fn to_subkey_test(target: &[u8], expected: &'static str) {
         let mut result = String::new();
         super::to_rfc1751_transform_append_subkey(target, &mut result);
         assert_eq!(result, expected);
     }
 
+    use super::ToRfc1751;
+
+    parameterized_tests! {
+        to_test;
+
+        to_test_01: &[0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53] =>
+                    "TIDE ITCH SLOW REIN RULE MOT"
+        to_test_02: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE, 
+                      0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66] =>
+                    "RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE"
+        to_test_03: &[0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50, 
+                      0x92, 0x0C, 0xDD, 0x74, 0x16, 0xDE, 0x80, 0x09] =>
+                    "TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL"
+        to_test_04: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE, 
+                      0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66,
+                      0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50, 
+                      0x92, 0x0C, 0xDD, 0x74, 0x16, 0xDE, 0x80, 0x09,
+                      0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53] => 
+                    concat!(
+                        "RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE ",
+                        "TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL ",
+                        "TIDE ITCH SLOW REIN RULE MOT"
+                    )
+    }
+
+    fn to_test(target: &[u8], expected: &'static str) {
+        let result = target.to_rfc1751();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected);
+    }
 }
