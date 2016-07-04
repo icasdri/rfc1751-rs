@@ -62,26 +62,24 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         if have > 8 {
             // if we have 8 bits or more available, grab the first 8
             let d = have - 8;
-            { // constrain commit's lifetime because we drain it for parity
-                let mut commit = (build >> d);
-                append_to.push(commit as u8);
+            let mut commit = (build >> d);
+            append_to.push(commit as u8);
 
-                // two-bit parity calculation
-                while commit > 0 {
-                    sum_for_parity += commit % 4;
-                    commit /= 4;
-                }
-            }
-
-            build = (build % (2 << (d-1)));
+            build = build % (2 << (d-1));
             have = d;
+
+            // two-bit parity calculation
+            while commit > 0 {
+                sum_for_parity += (commit % 4);
+                commit /= 4;
+            }
         } else {
             // otherwise pull another word to get more bits
             let pull_word = match iter.next() {
                 Some(w) => w,
                 None => break
             };
-            let mut current = try!(get_word_index(pull_word.as_ref()));
+            let addition = try!(get_word_index(pull_word.as_ref()));
 
             // shift our existing bits to make room for the addition if necessary
             if have > 0 {
@@ -89,13 +87,13 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
             }
 
             // append the new bits
-            build += current;
+            build += addition;
             have += 11;
         }
     }
 
     // check parity (the last two bits were left in build)
-    if build == sum_for_parity % 4 {
+    if build == (sum_for_parity % 4) {
         Ok(())
     } else {
         Err(FromTransformSubkeyError::IncorrectParity)
@@ -120,33 +118,44 @@ fn to_rfc1751_transform_append_subkey(input: &[u8], append_to: &mut String) {
     let mut build: usize = 0;
     let mut have = 0;
     let mut sum_for_parity = 0;
-    for current in input.iter() {
-        have += 8;
+    let mut iter = input.iter();
+    loop {
         if have > 11 {
             let d = have - 11;
-            // shift all bits right by d bits (leaving only the first 11-d bits)
-            build += (current >> d) as usize;
-            append_to.push_str(WORDS[build]);
+            let commit = (build >> d);
+            append_to.push_str(WORDS[commit]);
             append_to.push(' ');
-            // reset and carry over if necessary
-            // shift the last d bits left by 11-d bits in eleven-bit space
-            build = (*current as usize % (2 << (d-1))) * (2 << ((11-d)-1));
+
+            build = build % (2 << (d-1));
             have = d
         } else {
-            let d = 11 - have;
-            // shift all bits left by d bits in eleven-bit space
-            build += (*current as usize) * (2 << (d-1));
+            let mut addition = match iter.next() {
+                Some(&x) => x as usize,
+                None => break
+            };
+
+            if have > 0 {
+                build *= (2 << 7);
+            }
+
+            build += addition;
+            have += 8;
+
+            // two-bit parity calculation
+            while addition > 0 {
+                sum_for_parity += (addition % 4);
+                addition /= 4;
+            }
         }
 
-        // two-bit parity calculation
-        let mut drain = *current as usize;
-        while drain > 0 {
-            sum_for_parity += drain % 4;
-            drain /= 4;
-        }
     }
 
-    append_to.push_str(WORDS[build + (sum_for_parity % 4)]);
+    // make room for the two-bit parity
+    build *= 4;
+    // append the parity
+    build += (sum_for_parity % 4);
+    // commit the final word (that includes the parity bits)
+    append_to.push_str(WORDS[build]);
 }
 
 impl ToRfc1751 for [u8] {
