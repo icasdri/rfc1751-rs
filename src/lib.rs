@@ -59,14 +59,11 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
     let mut sum_for_parity: usize = 0;
     let mut iter = input.into_iter();
     loop {
-        println!("------------------");
-        println!("have: {}", have);
-        println!("build: {0:b}", build);
         if have > 8 {
+            // if we have 8 bits or more available, grab the first 8
             let d = have - 8;
-            {
+            { // constrain commit's lifetime because we drain it for parity
                 let mut commit = (build >> d);
-                println!("commit: {0:08b}", commit);
                 append_to.push(commit as u8);
 
                 // two-bit parity calculation
@@ -78,24 +75,24 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
 
             build = (build % (2 << (d-1)));
             have = d;
-            continue;
-        }
+        } else {
+            // otherwise pull another word to get more bits
+            let pull_word = match iter.next() {
+                Some(w) => w,
+                None => break
+            };
+            let mut current = try!(get_word_index(pull_word.as_ref()));
 
-        let pull_word = match iter.next() {
-            Some(w) => w,
-            None => break
-        };
+            // shift our existing bits to make room for the addition if necessary
+            if have > 0 {
+                build *= (2 << 10);
+            }
 
-        let mut current = try!(get_word_index(pull_word.as_ref()));
-        if have > 0 {
-            build *= (2 << 10);
+            // append the new bits
+            build += current;
+            have += 11;
         }
-        build += current;
-        have += 11;
     }
-        println!("------END---------");
-        println!("have: {}", have);
-        println!("build: {0:b}", build);
 
     // check parity (the last two bits were left in build)
     if build == sum_for_parity % 4 {
