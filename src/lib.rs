@@ -3,7 +3,8 @@ use words::WORDS;
 
 #[derive(Debug)]
 pub enum FromRfc1751Error<'a> {
-    InvalidWord(&'a str)
+    InvalidWord(&'a str),
+    IncorrectParity(Vec<u8>) // we still hand back what we got, despite wrong parity
 }
 
 #[derive(Debug)]
@@ -28,6 +29,28 @@ fn get_word_index(word: &str) -> Result<usize, FromRfc1751Error> {
                  .map_err(|_| FromRfc1751Error::InvalidWord(word))
         },
         _ => Err(FromRfc1751Error::InvalidWord(word))
+    }
+}
+
+fn from_rfc1751_transform_append_subkey<I, T>(input: I, append_to: &mut Vec<u8>)
+        where I: IntoIterator<Item=T>, T: AsRef<str> {
+    for s in input {
+        // TODO: testing only
+        println!("{}", get_word_index(s.as_ref()).unwrap());
+    }
+}
+
+impl<I, T> FromRfc1751 for I where I: IntoIterator<Item=T>, T: AsRef<str> {
+    fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
+        // TODO: testing only
+        Ok(vec![22])
+    }
+}
+
+impl FromRfc1751 for AsRef<str> {
+    fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
+        // TODO: testing only
+        Ok(vec![22])
     }
 }
 
