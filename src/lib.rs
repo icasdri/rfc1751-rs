@@ -31,13 +31,14 @@ fn get_word_index(word: &str) -> Result<usize, FromRfc1751Error> {
         1...4 => {
             // binary search for the word's index (aka. bit value)
             WORDS.binary_search_by(|g| 
-                match g.len().cmp(&(word.len())) {
-                    Ordering::Equal => g.cmp(&word),
-                    Ordering::Less => Ordering::Less,
-                    Ordering::Greater => Ordering::Greater,
+                if g.len() < 4 && word.len() == 4 {
+                    Ordering::Less
+                } else if g.len() == 4 && word.len() < 4 {
+                    Ordering::Greater
+                } else {
+                    g.cmp(&word)
                 }
-            )
-                 .map_err(|_| FromRfc1751Error::InvalidWord(word))
+            ).map_err(|_| FromRfc1751Error::InvalidWord(word))
         },
         _ => Err(FromRfc1751Error::InvalidWord(word))
     }
@@ -207,6 +208,7 @@ mod tests {
         word_index_test_04: "tide" => Err(()) // we are case-sensitive, clients deal with case
         word_index_test_05: "BABABA" => Err(())
         word_index_test_06: "" => Err(())
+        word_index_test_07: "AX" => Ok(41)
     }
 
     fn word_index_test(word: &'static str, expected: Result<usize, ()>) {
@@ -229,9 +231,9 @@ mod tests {
     }
 
     #[test]
-    fn word_index_test_five_random() {
+    fn word_index_test_ten_random() {
         let mut rng = thread_rng();
-        for _ in 0..5 {
+        for _ in 0..10 {
             let n: usize = rng.gen_range(0, WORDS.len());
             let word = WORDS[n];
             let result = super::get_word_index(word);
