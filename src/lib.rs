@@ -7,8 +7,14 @@ mod words;
 use words::WORDS;
 
 #[derive(Debug)]
-pub enum FromRfc1751Error<'a> {
-    InvalidWord(&'a str),
+enum FromTransformSubkeyError {
+    InvalidWord(String),
+    IncorrectParity
+}
+
+#[derive(Debug)]
+pub enum FromRfc1751Error {
+    InvalidWord(String),
     IncorrectParity(Vec<u8>) // we still hand back what we got, despite wrong parity
 }
 
@@ -25,7 +31,7 @@ pub trait ToRfc1751 {
     fn to_rfc1751(&self) -> Result<String, ToRfc1751Error>;
 }
 
-fn get_word_index(word: &str) -> Result<usize, FromRfc1751Error> {
+fn get_word_index(word: &str) -> Result<usize, FromTransformSubkeyError> {
     match word.len() {
         // we know that all valid words are 1 to 4 letters long
         1...4 => {
@@ -38,18 +44,59 @@ fn get_word_index(word: &str) -> Result<usize, FromRfc1751Error> {
                 } else {
                     g.cmp(&word)
                 }
-            ).map_err(|_| FromRfc1751Error::InvalidWord(word))
+            ).map_err(|_| FromTransformSubkeyError::InvalidWord(word.to_owned()))
         },
-        _ => Err(FromRfc1751Error::InvalidWord(word))
+        _ => Err(FromTransformSubkeyError::InvalidWord(word.to_owned()))
     }
 }
 
-fn from_rfc1751_transform_append_subkey<I, T>(input: I, append_to: &mut Vec<u8>)
+fn from_rfc1751_transform_append_subkey<I, T>(input: I, 
+        append_to: &mut Vec<u8>) -> Result<(), FromTransformSubkeyError> 
         where I: IntoIterator<Item=T>, T: AsRef<str> {
-    for s in input {
-        // TODO: testing only
-        println!("{}", get_word_index(s.as_ref()).unwrap());
+
+    let mut build: usize = 0;
+    let mut have = 0;
+    let mut sum_for_parity = 0;
+    let mut iter = input.into_iter();
+    loop {
+        println!("------------------");
+        println!("have: {}", have);
+        println!("build: {0:b}", build);
+        if have > 8 {
+            let d = have - 8;
+            let commit = (build >> d) as u8;
+            println!("commit: {0:08b}", commit);
+            append_to.push(commit);
+            build = (build % (2 << (d-1)));
+            have = d;
+            continue;
+        }
+
+        let pull_word = match iter.next() {
+            Some(w) => w,
+            None => break
+        };
+
+        let mut current = try!(get_word_index(pull_word.as_ref()));
+        if have > 0 {
+            build *= (2 << 10);
+        }
+        build += current;
+        have += 11;
+
+        // two-bit parity calculation
+        while current > 0 {
+            sum_for_parity += current % 4;
+            current /= 4;
+        }
     }
+
+    // check parity (the last two bits were left in build)
+    // if build == sum_for_parity {
+        Ok(())
+    // } else {
+        // Err(FromTransformSubkeyError::IncorrectParity)
+    // }
 }
 
 impl<I, T> FromRfc1751 for I where I: IntoIterator<Item=T>, T: AsRef<str> {
@@ -135,6 +182,28 @@ mod tests {
     use words::WORDS;
     use super::FromRfc1751;
     use super::ToRfc1751;
+
+    parameterized_tests! {
+        from_subkey_test;
+
+        from_subkey_test_01: &["TIDE", "ITCH", "SLOW", "REIN", "RULE", "MOT"] =>
+                             &[0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53]
+        from_subkey_test_02: &["RASH", "BUSH", "MILK", "LOOK", "BAD", "BRIM"] =>
+                             &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE]
+        from_subkey_test_03: &["AVID", "GAFF", "BAIT", "ROT", "POD", "LOVE"] =>
+                             &[0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66]
+        from_subkey_test_04: &["TROD", "MUTE", "TAIL", "WARM", "CHAR", "KONG"] =>
+                             &[0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50]
+        from_subkey_test_05: &["HAAG", "CITY", "BORE", "O", "TEAL", "AWL"] =>
+                             &[0x92, 0x0C, 0xDD, 0x74, 0x16, 0xDE, 0x80, 0x09]
+    }
+
+    fn from_subkey_test(input: &[&'static str], expected: &[u8]) {
+        let mut fill = Vec::new();
+        let result = super::from_rfc1751_transform_append_subkey(input, &mut fill);
+        assert!(result.is_ok());
+        assert_eq!(fill, expected);
+    }
 
     parameterized_tests! {
         to_subkey_test;
@@ -223,7 +292,7 @@ mod tests {
             Err(_) => {
                 assert!(result.is_err());
                 assert!(match result.unwrap_err() {
-                    super::FromRfc1751Error::InvalidWord(w) => (word == w),
+                    super::FromTransformSubkeyError::InvalidWord(w) => (word == w),
                     _ => false
                 });
             }
