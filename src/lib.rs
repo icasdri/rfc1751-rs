@@ -198,18 +198,6 @@ mod tests {
         });
     }
 
-    #[test]
-    fn word_index_test_five_random() {
-        let mut rng = thread_rng();
-        for _ in 0..5 {
-            let n: usize = rng.gen_range(0, WORDS.len());
-            let word = WORDS[n];
-            let result = super::get_word_index(word);
-            assert!(result.is_ok());
-            assert_eq!(result.unwrap(), n);
-        }
-    }
-
     parameterized_tests! {
         word_index_test;
 
@@ -239,4 +227,19 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn word_index_test_five_random() {
+        let mut rng = thread_rng();
+        for _ in 0..5 {
+            let n: usize = rng.gen_range(0, WORDS.len());
+            let word = WORDS[n];
+            let result = super::get_word_index(word);
+            println!("word_index_test_five_random: case {} <--> {}; result {:?}",
+                     n, word, result);
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap(), n);
+        }
+    }
+
 }
