@@ -9,7 +9,8 @@ use words::WORDS;
 #[derive(Debug)]
 enum FromTransformSubkeyError {
     InvalidWord(String),
-    IncorrectParity
+    IncorrectParity,
+    TooShort // aka. too few words (not the right length)
 }
 
 #[derive(Debug)]
@@ -55,6 +56,8 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         append_to: &mut Vec<u8>) -> Result<(), FromTransformSubkeyError> 
         where I: IntoIterator<Item=T>, T: AsRef<str> {
 
+    let mut count = 0; // counter for ensuring we have enough for six words
+                       // (we just use the first six if we have emore)
     let mut build: usize = 0;
     let mut have = 0;
     let mut sum_for_parity: usize = 0;
@@ -77,7 +80,10 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         } else {
             // otherwise pull another word to get more bits
             let pull_word = match iter.next() {
-                Some(w) => w,
+                Some(w) => {
+                    count += 1;
+                    w
+                },
                 None => break
             };
             let addition = try!(get_word_index(pull_word.as_ref()));
@@ -93,11 +99,14 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         }
     }
 
-    // check parity (the last two bits were left in build)
-    if build == (sum_for_parity % 4) {
-        Ok(())
-    } else {
+    if count != 6 {
+        // check for count (need 6 words)
+        Err(FromTransformSubkeyError::TooShort)
+    } else if build != (sum_for_parity % 4) {
+        // check for parity (the last two bits were left in build)
         Err(FromTransformSubkeyError::IncorrectParity)
+    } else {
+        Ok(())
     }
 }
 
@@ -217,6 +226,18 @@ mod tests {
         let result = super::from_rfc1751_transform_append_subkey(input, &mut fill);
         assert!(result.is_ok());
         assert_eq!(fill, expected);
+    }
+
+    #[test]
+    fn from_subkey_test_too_short() {
+        let mut fill = Vec::new();
+        let input = &["TROD", "MUTE", "TAIL", "WARM", "CHAR"]; // only five words
+        let result = super::from_rfc1751_transform_append_subkey(input, &mut fill);
+        assert!(result.is_err());
+        assert!(match result.unwrap_err() {
+            super::FromTransformSubkeyError::TooShort => true,
+            _ => false
+        });
     }
 
     parameterized_tests! {
