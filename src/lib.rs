@@ -56,7 +56,7 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
 
     let mut build: usize = 0;
     let mut have = 0;
-    let mut sum_for_parity = 0;
+    let mut sum_for_parity: usize = 0;
     let mut iter = input.into_iter();
     loop {
         println!("------------------");
@@ -64,9 +64,18 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         println!("build: {0:b}", build);
         if have > 8 {
             let d = have - 8;
-            let commit = (build >> d) as u8;
-            println!("commit: {0:08b}", commit);
-            append_to.push(commit);
+            {
+                let mut commit = (build >> d);
+                println!("commit: {0:08b}", commit);
+                append_to.push(commit as u8);
+
+                // two-bit parity calculation
+                while commit > 0 {
+                    sum_for_parity += commit % 4;
+                    commit /= 4;
+                }
+            }
+
             build = (build % (2 << (d-1)));
             have = d;
             continue;
@@ -83,20 +92,17 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         }
         build += current;
         have += 11;
-
-        // two-bit parity calculation
-        while current > 0 {
-            sum_for_parity += current % 4;
-            current /= 4;
-        }
     }
+        println!("------END---------");
+        println!("have: {}", have);
+        println!("build: {0:b}", build);
 
     // check parity (the last two bits were left in build)
-    // if build == sum_for_parity {
+    if build == sum_for_parity % 4 {
         Ok(())
-    // } else {
-        // Err(FromTransformSubkeyError::IncorrectParity)
-    // }
+    } else {
+        Err(FromTransformSubkeyError::IncorrectParity)
+    }
 }
 
 impl<I, T> FromRfc1751 for I where I: IntoIterator<Item=T>, T: AsRef<str> {
