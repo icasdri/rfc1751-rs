@@ -135,4 +135,17 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected);
     }
+
+    #[test]
+    fn to_test_wrong_length() {
+        // this input has length of 10, not a multiple of eight
+        let target = &[0xFF, 0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66, 0xFF];
+        let result = target.to_rfc1751();
+        assert!(result.is_err());
+        assert!(match result.unwrap_err() {
+            super::ToRfc1751Error::NotMultipleOfEight => true,
+            // There's currently only one ToRfc1751Error, so this branch would be unreachable
+            // _ => false
+        });
+    }
 }
