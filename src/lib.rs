@@ -50,6 +50,7 @@ fn get_word_index(word: &str) -> Result<usize, FromTransformSubkeyError> {
     }
 }
 
+#[allow(unused_parens)]
 fn from_rfc1751_transform_append_subkey<I, T>(input: I, 
         append_to: &mut Vec<u8>) -> Result<(), FromTransformSubkeyError> 
         where I: IntoIterator<Item=T>, T: AsRef<str> {
@@ -114,6 +115,7 @@ impl FromRfc1751 for AsRef<str> {
     }
 }
 
+#[allow(unused_parens)]
 fn to_rfc1751_transform_append_subkey(input: &[u8], append_to: &mut String) {
     let mut build: usize = 0;
     let mut have = 0;
