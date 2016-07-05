@@ -2,6 +2,12 @@
 name = "rfc1751"
 version = "0.1.0"
 authors = ["icasdri <icasdri@example.com>"]
+description = "Implementation of the human-readable binary-to-text system RFC 1751"
+homepage = "https://github.com/icasdri/rfc1751-rs"
+repository = "https://github.com/icasdri/rfc1751-rs"
+license = "MIT"
+readme = "README.md"
+keywords = ["rfc1751", "binascii", "key", "crypto", "human-readable"]
 
 [dependencies]
 
