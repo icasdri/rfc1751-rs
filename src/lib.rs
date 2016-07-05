@@ -10,13 +10,15 @@ use words::WORDS;
 enum FromTransformSubkeyError {
     InvalidWord(String),
     IncorrectParity,
-    TooShort // aka. too few words (not the right length)
+    TooShort, // aka. too few words (not enough to pull six)
+    NothingToTransform
 }
 
 #[derive(Debug)]
 pub enum FromRfc1751Error {
     InvalidWord(String),
-    IncorrectParity(Vec<u8>) // we still hand back what we got, despite wrong parity
+    IncorrectParity(Vec<u8>), // we still hand back what we got, despite wrong parity
+    NotMultipleOfSixWords // not a multiple of six words
 }
 
 #[derive(Debug)]
@@ -99,7 +101,9 @@ fn from_rfc1751_transform_append_subkey<I, T>(input: I,
         }
     }
 
-    if count != 6 {
+    if count == 0 {
+        Err(FromTransformSubkeyError::NothingToTransform)
+    } else if count != 6 {
         // check for count (need 6 words)
         Err(FromTransformSubkeyError::TooShort)
     } else if build != (sum_for_parity % 4) {
@@ -236,6 +240,18 @@ mod tests {
         assert!(result.is_err());
         assert!(match result.unwrap_err() {
             super::FromTransformSubkeyError::TooShort => true,
+            _ => false
+        });
+    }
+
+    #[test]
+    fn from_subkey_test_nothing() {
+        let mut fill = Vec::new();
+        let input: &[&str] = &[]; // empty!
+        let result = super::from_rfc1751_transform_append_subkey(input, &mut fill);
+        assert!(result.is_err());
+        assert!(match result.unwrap_err() {
+            super::FromTransformSubkeyError::NothingToTransform => true,
             _ => false
         });
     }
