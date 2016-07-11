@@ -35,6 +35,37 @@ pub trait ToRfc1751 {
     fn to_rfc1751(&self) -> Result<String, ToRfc1751Error>;
 }
 
+impl<C, T> FromRfc1751 for C where C: Deref<Target=[T]>, T: AsRef<str> {
+    fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
+        from_rfc1751_transform_general(self.iter())
+    }
+}
+
+impl FromRfc1751 for str {
+    fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
+        from_rfc1751_transform_general(self.split_whitespace())
+    }
+}
+
+impl ToRfc1751 for [u8] {
+    fn to_rfc1751(&self) -> Result<String, ToRfc1751Error> {
+        if self.len() % 8 != 0 {
+            return Err(self::ToRfc1751Error::NotMultipleOfEight);
+        }
+
+        let mut result = String::new();
+        for subkey in self.chunks(8) {
+            to_rfc1751_transform_append_subkey(subkey, &mut result);
+            result.push(' ');
+        }
+        // pop trailing space
+        result.pop();
+
+        Ok(result)
+    }
+}
+
+
 fn get_word_index(word: &str) -> Result<usize, FromTransformSubkeyError> {
     match word.len() {
         // we know that all valid words are 1 to 4 letters long
@@ -139,18 +170,6 @@ fn from_rfc1751_transform_general<I, T>(mut iter: I) -> Result<Vec<u8>, FromRfc1
     Ok(fill)
 }
 
-// impl<C, T> FromRfc1751 for C where C: Deref<Target=[T]>, T: AsRef<str> {
-    // fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
-        // from_rfc1751_transform_general(self.iter())
-    // }
-// }
-
-impl<S> FromRfc1751 for S where S: AsRef<str> {
-    fn from_rfc1751(&self) -> Result<Vec<u8>, FromRfc1751Error> {
-        from_rfc1751_transform_general(self.as_ref().split_whitespace())
-    }
-}
-
 #[allow(unused_parens)]
 fn to_rfc1751_transform_append_subkey(input: &[u8], append_to: &mut String) {
     let mut build: usize = 0;
@@ -194,24 +213,6 @@ fn to_rfc1751_transform_append_subkey(input: &[u8], append_to: &mut String) {
     build += (sum_for_parity % 4);
     // commit the final word (that includes the parity bits)
     append_to.push_str(WORDS[build]);
-}
-
-impl ToRfc1751 for [u8] {
-    fn to_rfc1751(&self) -> Result<String, ToRfc1751Error> {
-        if self.len() % 8 != 0 {
-            return Err(self::ToRfc1751Error::NotMultipleOfEight);
-        }
-
-        let mut result = String::new();
-        for subkey in self.chunks(8) {
-            to_rfc1751_transform_append_subkey(subkey, &mut result);
-            result.push(' ');
-        }
-        // pop trailing space
-        result.pop();
-
-        Ok(result)
-    }
 }
 
 
@@ -314,6 +315,11 @@ mod tests {
         let result_owned = owned.from_rfc1751();
         assert!(result_owned.is_ok());
         assert_eq!(result_owned.unwrap(), expected);
+
+        let splitted_owned: Vec<&str> = owned.split_whitespace().collect();
+        let result_splitted = splitted_owned.from_rfc1751();
+        assert!(result_splitted.is_ok());
+        assert_eq!(result_splitted.unwrap(), expected);
     }
 
     parameterized_tests! {
