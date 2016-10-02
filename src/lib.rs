@@ -71,7 +71,7 @@ fn get_word_index(word: &str) -> Result<usize, FromTransformSubkeyError> {
         // we know that all valid words are 1 to 4 letters long
         1...4 => {
             // binary search for the word's index (aka. bit value)
-            WORDS.binary_search_by(|g| 
+            WORDS.binary_search_by(|g|
                 if g.len() < 4 && word.len() == 4 {
                     Ordering::Less
                 } else if g.len() == 4 && word.len() < 4 {
@@ -87,11 +87,11 @@ fn get_word_index(word: &str) -> Result<usize, FromTransformSubkeyError> {
 
 #[allow(unused_parens)]
 fn from_rfc1751_transform_append_subkey<I, T>(iter: &mut I,
-        append_to: &mut Vec<u8>) -> Result<(), FromTransformSubkeyError> 
+        append_to: &mut Vec<u8>) -> Result<(), FromTransformSubkeyError>
         where I: Iterator<Item=T>, T: AsRef<str> {
 
     let mut count = 0; // counter for ensuring we have enough for six words
-                       // (we just use the first six if we have emore)
+                       // (we just use the first six if we have more)
     let mut build: usize = 0;
     let mut have = 0;
     let mut sum_for_parity: usize = 0;
@@ -348,17 +348,17 @@ mod tests {
 
         to_test_01: &[0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53] =>
                     "TIDE ITCH SLOW REIN RULE MOT"
-        to_test_02: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE, 
+        to_test_02: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE,
                       0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66] =>
                     "RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE"
-        to_test_03: &[0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50, 
+        to_test_03: &[0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50,
                       0x92, 0x0C, 0xDD, 0x74, 0x16, 0xDE, 0x80, 0x09] =>
                     "TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL"
-        to_test_04: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE, 
+        to_test_04: &[0xCC, 0xAC, 0x2A, 0xED, 0x59, 0x10, 0x56, 0xBE,
                       0x4F, 0x90, 0xFD, 0x44, 0x1C, 0x53, 0x47, 0x66,
-                      0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50, 
+                      0xEF, 0xF8, 0x1F, 0x9B, 0xFB, 0xC6, 0x53, 0x50,
                       0x92, 0x0C, 0xDD, 0x74, 0x16, 0xDE, 0x80, 0x09,
-                      0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53] => 
+                      0xEB, 0x33, 0xF7, 0x7E, 0xE7, 0x3D, 0x40, 0x53] =>
                     concat!(
                         "RASH BUSH MILK LOOK BAD BRIM AVID GAFF BAIT ROT POD LOVE ",
                         "TROD MUTE TAIL WARM CHAR KONG HAAG CITY BORE O TEAL AWL ",
